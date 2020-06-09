@@ -1,5 +1,7 @@
 import argparse
 import time
+import os
+
 import numpy as np
 import collections
 
@@ -23,6 +25,8 @@ EPSILON_DECAY_LAST_FRAME = 100000
 EPSILON_START = 1.0
 EPSILON_FINAL = 0.01
 
+TEST_EPISODES = 100
+TEST_FRAMES = 10000
 
 Experience = collections.namedtuple(
     'Experience', field_names=['state', 'action', 'reward',
@@ -122,12 +126,36 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
     return nn.MSELoss()(state_action_values, expected_state_action_values)
 
 
+def test_net(net, num_episodes):
+    all_rewards = 0.0
+    episode_rewards = 0.0
+    env = gym.make('LunarLander-v2')
+    state = env.reset()
+    for _ in range(num_episodes):
+        state_a = np.array([state], copy=False)
+        state_v = torch.FloatTensor(state_a).to(device)
+        q_vals_v = net(state_v)
+        _, act_v = torch.max(q_vals_v, dim=1)
+        action = int(act_v.item())
+        state, reward, is_done, _ = env.step(action)
+        episode_rewards += reward
+        if is_done:
+            all_rewards += episode_rewards
+            episode_rewards = 0
+            state = env.reset()
+    return all_rewards / num_episodes
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", default=False,
                         action="store_true", help="Enable cuda")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
+
+    mypath = os.path.join(os.path.dirname(__file__), 'test_nets')
+    if not os.path.isdir(mypath):
+        os.makedirs(mypath)
 
     env = gym.make('LunarLander-v2')
 
@@ -149,6 +177,7 @@ if __name__ == "__main__":
 
     while True:
         frame_idx += 1
+
         epsilon = max(EPSILON_FINAL, EPSILON_START -
                       frame_idx / EPSILON_DECAY_LAST_FRAME)
 
@@ -169,15 +198,19 @@ if __name__ == "__main__":
             writer.add_scalar("reward_100", m_reward, frame_idx)
             writer.add_scalar("reward", reward, frame_idx)
             if best_m_reward is None or best_m_reward < m_reward:
-                torch.save(net.state_dict(), "island" +
-                           "-best_%.0f.dat" % m_reward)
                 if best_m_reward is not None:
-                    print("Best reward updated %.3f -> %.3f" % (
+                    print("Best training reward updated %.3f -> %.3f" % (
                         best_m_reward, m_reward))
                 best_m_reward = m_reward
             if m_reward > MEAN_REWARD_BOUND:
                 print("Solved in %d frames!" % frame_idx)
                 break
+
+        if ((frame_idx + 1) % TEST_FRAMES) == 0:
+            score = test_net(net, TEST_EPISODES)
+            torch.save(net.state_dict(), "test_nets/" +
+                       "test_%.3f.dat" % score)
+            print("TEST SCORES: " + str(score))
 
         if len(buffer) < REPLAY_START_SIZE:
             continue
