@@ -25,7 +25,7 @@ EPSILON_DECAY_LAST_FRAME = 100000
 EPSILON_START = 1.0
 EPSILON_FINAL = 0.01
 
-TEST_EPISODES = 100
+TEST_EPISODES = 5
 TEST_FRAMES = 10000
 
 Experience = collections.namedtuple(
@@ -126,24 +126,23 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
     return nn.MSELoss()(state_action_values, expected_state_action_values)
 
 
-def test_net(net, num_episodes):
+def test_net(net):
     all_rewards = 0.0
-    episode_rewards = 0.0
     env = gym.make('LunarLander-v2')
-    state = env.reset()
-    for _ in range(num_episodes):
-        state_a = np.array([state], copy=False)
-        state_v = torch.FloatTensor(state_a).to(device)
-        q_vals_v = net(state_v)
-        _, act_v = torch.max(q_vals_v, dim=1)
-        action = int(act_v.item())
-        state, reward, is_done, _ = env.step(action)
-        episode_rewards += reward
-        if is_done:
-            all_rewards += episode_rewards
-            episode_rewards = 0
-            state = env.reset()
-    return all_rewards / num_episodes
+    for _ in range(TEST_EPISODES):
+        state = env.reset()
+        episode_rewards = 0
+        is_done = False
+        while not is_done:
+            state_a = np.array([state], copy=False)
+            state_v = torch.FloatTensor(state_a).to(device)
+            q_vals_v = net(state_v)
+            _, act_v = torch.max(q_vals_v, dim=1)
+            action = int(act_v.item())
+            state, reward, is_done, _ = env.step(action)
+            episode_rewards += reward
+        all_rewards += episode_rewards
+    return all_rewards / TEST_EPISODES
 
 
 if __name__ == "__main__":
@@ -207,7 +206,7 @@ if __name__ == "__main__":
                 break
 
         if ((frame_idx + 1) % TEST_FRAMES) == 0:
-            score = test_net(net, TEST_EPISODES)
+            score = test_net(net)
             torch.save(net.state_dict(), "test_nets/" +
                        "test_%.3f.dat" % score)
             print("TEST SCORES: " + str(score))
