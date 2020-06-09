@@ -1,11 +1,7 @@
 import trial01
 
 import numpy as np
-
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
 import gym
 
 PATH = "test_nets/test_239.758.dat"
