@@ -28,3 +28,4 @@ for _ in range(NUM_EPISODES):
         state, reward, is_done, _ = env.step(action)
         if is_done:
             state = env.reset()
+env.close()
