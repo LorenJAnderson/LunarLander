@@ -1,4 +1,4 @@
-import trial01
+import DQN_trial01
 
 import numpy as np
 import torch
@@ -8,7 +8,7 @@ PATH = "test_nets/test_239.758.dat"
 NUM_EPISODES = 10
 device = "cpu"
 
-net = trial01.Net(8, 64, 4)
+net = DQN_trial01.Net(8, 64, 4)
 net.load_state_dict(torch.load(PATH))
 
 env = gym.make('LunarLander-v2')
