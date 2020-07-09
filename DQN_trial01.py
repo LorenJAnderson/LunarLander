@@ -84,7 +84,7 @@ class Agent:
         done_reward = None
 
         if np.random.random() < epsilon:
-            action = np.random.randint(4)
+            action = np.random.randint(2)
         else:
             state_a = np.array([self.state], copy=False)
             state_v = torch.FloatTensor(state_a).to(device)
@@ -128,7 +128,7 @@ def calc_loss(batch, net, tgt_net, device="cpu"):
 
 def test_net(net):
     all_rewards = 0.0
-    env = gym.make('LunarLander-v2')
+    env = gym.make('CartPole-v0')
     for _ in range(TEST_EPISODES):
         state = env.reset()
         episode_rewards = 0
@@ -156,10 +156,10 @@ if __name__ == "__main__":
     if not os.path.isdir(mypath):
         os.makedirs(mypath)
 
-    env = gym.make('LunarLander-v2')
+    env = gym.make('CartPole-v0')
 
-    net = Net(8, 64, 4).to(device)
-    tgt_net = Net(8, 64, 4).to(device)
+    net = Net(4, 64, 2).to(device)
+    tgt_net = Net(4, 64, 2).to(device)
     writer = SummaryWriter(comment="-lunarlander")
     print(net)
 
